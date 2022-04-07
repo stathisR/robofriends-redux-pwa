@@ -1,39 +1,23 @@
 import React, { useState, useEffect } from "react";
+import { useSelector, useDispatch } from "react-redux";
 import CardList from "../components/CardList";
 import SearchBox from "../components/SearchBox";
 import './App.css';
 import Scroll from "../components/Scroll";
 import ErrorBoundary from "../components/ErrorBoundary";
+import { setSearchField, requestRobots } from "../actions";
 
 const App = () => {
-  const [robots, setRobots] = useState(null);
-  const [error, setError] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [searchField, setSearchField] = useState('');
-  const [filteredRobots, setFilteredRobots] = useState(null);
+  const [filteredRobots, setFilteredRobots] = useState([]);
+  const robots = useSelector(state => state.requestRobots.robots);
+  const error = useSelector(state => state.requestRobots.error);
+  const isPending = useSelector(state => state.requestRobots.isPending);
+  const searchField = useSelector(state => state.searchRobots.searchField);
+  const dispatch = useDispatch();
 
   useEffect(() => {
-    if (loading) {
-      fetch('https://jsonplaceholder.typicode.com/users')
-      .then(response => {
-        if (response.ok) {
-          return response.json();
-        }
-        throw response;
-      })
-      .then(robots => {
-        console.log('Robots fetched!');
-        setRobots(robots);
-      })
-      .catch(error => {
-        console.error('Error fetching robots!', error);
-        setError(error);
-      })
-      .finally(() => {
-        setLoading(false);
-      });
-    }
-  }, [loading]);
+    dispatch(requestRobots());
+  }, [dispatch]);
 
   useEffect(() => {
     if (robots) {
@@ -41,10 +25,10 @@ const App = () => {
         return robot.name.toLowerCase().includes(searchField);
       }));
     }
-  }, [robots, searchField]);
+  }, [searchField, robots]);
 
   const onSearchChange = (event) => {
-    setSearchField(event.target.value);
+    dispatch(setSearchField(event.target.value));
   };
 
   return (
@@ -53,9 +37,12 @@ const App = () => {
       <SearchBox searchChange={onSearchChange} />
       <ErrorBoundary>
         <Scroll>
-          { loading && <h2>Loading...</h2> }
-          { (!loading && error) && <h2>Error loading robots!</h2> }
-          { (!loading && !error) && <CardList robots={filteredRobots} /> }
+          { isPending
+            ? <h2>Loading...</h2>
+            : error
+              ? <h2>Error loading robots!</h2>
+              : <CardList robots={filteredRobots} />
+          }
         </Scroll>
       </ErrorBoundary>
     </div>
